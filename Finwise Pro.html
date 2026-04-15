@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Finwise Pro · Complete Finance Manager by Nisitha Wijerathna</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-primary: #F4F7FC; --bg-secondary: #ffffff; --card-bg: rgba(255,255,255,0.96);
+      --text-primary: #1A2C3E; --text-secondary: #5B6E8C; --border-color: rgba(166,188,200,0.25);
+      --nav-bg: #F0F3F8; --metric-bg: #ffffff; --metric-border: #EAF0F5;
+      --success: #1C8B5E; --danger: #D45A4A; --warning: #E6A017; --info: #378ADD;
+    }
+    body.dark {
+      --bg-primary: #121826; --bg-secondary: #1E2538; --card-bg: rgba(30,37,56,0.96);
+      --text-primary: #E8EDF5; --text-secondary: #8E9DB5; --border-color: rgba(60,70,95,0.5);
+      --nav-bg: #2A3348; --metric-bg: #252E44; --metric-border: #353F58;
+    }
+    body { background: var(--bg-primary); font-family: 'Inter', sans-serif; padding: 1rem; color: var(--text-primary); transition: all 0.3s ease; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem 1.5rem; background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border-color); }
+    .logo h1 { font-size: 1.5rem; } .logo p { font-size: 0.7rem; color: var(--text-secondary); }
+    .header-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .main-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: var(--card-bg); padding: 0.5rem; border-radius: 60px; border: 1px solid var(--border-color); flex-wrap: wrap; }
+    .main-tab { padding: 0.75rem 1.5rem; font-size: 0.9rem; font-weight: 600; border-radius: 40px; cursor: pointer; background: transparent; border: none; color: var(--text-secondary); transition: all 0.2s; }
+    .main-tab.active { background: var(--success); color: white; box-shadow: 0 4px 12px rgba(28,139,94,0.3); }
+    .panel { display: none; animation: fadeIn 0.3s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .card { background: var(--card-bg); border-radius: 24px; padding: 1.5rem; border: 1px solid var(--border-color); margin-bottom: 1.5rem; }
+    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.4rem; }
+    input, select, textarea { width: 100%; padding: 0.7rem 1rem; border-radius: 16px; border: 1px solid var(--metric-border); background: var(--metric-bg); color: var(--text-primary); font-family: inherit; font-size: 0.9rem; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--success); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .btn { padding: 0.5rem 1rem; border-radius: 40px; font-size: 0.8rem; font-weight: 500; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+    .btn-primary { background: var(--success); color: white; }
+    .btn-primary:hover { background: #156B4A; transform: translateY(-1px); }
+    .btn-secondary { background: var(--nav-bg); color: var(--text-primary); border: 1px solid var(--metric-border); }
+    .btn-danger { background: var(--danger); color: white; }
+    .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .item-card { background: var(--metric-bg); border-radius: 16px; padding: 1rem; border: 1px solid var(--metric-border); display: flex; justify-content: space-between; align-items: center; }
+    .item-name { font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem; }
+    .item-detail { font-size: 0.75rem; color: var(--text-secondary); }
+    .item-actions { display: flex; gap: 0.5rem; }
+    .icon-btn { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; border-radius: 8px; }
+    .icon-btn:hover { background: var(--nav-bg); }
+    .transaction-list { max-height: 500px; overflow-y: auto; }
+    .transaction-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid var(--metric-border); cursor: pointer; transition: background 0.2s; }
+    .transaction-item:hover { background: var(--nav-bg); }
+    .transaction-info { flex: 1; }
+    .transaction-category { font-size: 0.85rem; font-weight: 600; }
+    .transaction-date { font-size: 0.7rem; color: var(--text-secondary); }
+    .transaction-amount { font-size: 0.9rem; font-weight: 700; }
+    .amount-income { color: var(--success); } .amount-expense { color: var(--danger); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card { background: var(--metric-bg); padding: 1rem; border-radius: 16px; text-align: center; border: 1px solid var(--metric-border); }
+    .stat-label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.25rem; }
+    .stat-value { font-size: 1.3rem; font-weight: 700; }
+    .chart-container { height: 250px; margin: 1rem 0; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+    .modal.active { display: flex; }
+    .modal-content { background: var(--card-bg); border-radius: 24px; padding: 1.5rem; max-width: 450px; width: 90%; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .empty-state { text-align: center; padding: 3rem; color: var(--text-secondary); }
+    .toast { position: fixed; bottom: 20px; right: 20px; background: var(--success); color: white; padding: 0.75rem 1.5rem; border-radius: 40px; font-size: 0.85rem; z-index: 1100; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .balance-positive { color: var(--success); font-weight: 600; }
+    .loading { text-align: center; padding: 2rem; }
+    .spinner { border: 3px solid var(--metric-border); border-top: 3px solid var(--success); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    /* Footer Styles */
+    .footer {
+      margin-top: 2rem;
+      padding: 1rem 1.5rem;
+      background: var(--card-bg);
+      border-radius: 24px;
+      border: 1px solid var(--border-color);
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    .footer a {
+      color: var(--success);
+      text-decoration: none;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    .creator-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--metric-bg);
+      padding: 0.3rem 0.8rem;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <h1>💰 Finwise Pro</h1>
+      <p>Secure Database · Complete Finance Manager</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" onclick="toggleDarkMode()" id="darkModeToggle">🌙 Dark mode</button>
+      <button class="btn btn-secondary" onclick="exportToCSV()">📥 Export CSV</button>
+      <button class="btn btn-secondary" onclick="exportToPDF()">📄 Export PDF</button>
+      <button class="btn btn-secondary" onclick="backupDatabase()">💾 Backup DB</button>
+      <button class="btn btn-secondary" onclick="showImportModal()">📂 Restore</button>
+    </div>
+  </div>
+
+  <div class="main-tabs">
+    <button class="main-tab active" onclick="switchPanel('transactions-panel', this)">📝 Transactions</button>
+    <button class="main-tab" onclick="switchPanel('analysis-panel', this)">📊 Analysis</button>
+    <button class="main-tab" onclick="switchPanel('categories-panel', this)">📁 Categories</button>
+    <button class="main-tab" onclick="switchPanel('accounts-panel', this)">🏦 Accounts</button>
+  </div>
+
+  <div id="loadingIndicator" class="loading" style="display: none;"><div class="spinner"></div><p>Loading...</p></div>
+
+  <!-- Transactions Panel -->
+  <div id="transactions-panel" class="panel active">
+    <div class="card">
+      <div class="card-title" id="formTitle">➕ Add New Transaction</div>
+      <form id="transactionForm" onsubmit="saveTransaction(event)">
+        <div class="form-row">
+          <div class="form-group"><label>📅 Date</label><input type="date" id="txnDate" required></div>
+          <div class="form-group"><label>💰 Type</label><select id="txnType" required onchange="updateCategoryDropdown()"><option value="expense">Expense (-)</option><option value="income">Income (+)</option><option value="transfer">Transfer</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>💵 Amount (Rs.)</label><input type="number" id="txnAmount" step="0.01" required placeholder="0.00"></div>
+          <div class="form-group"><label>🏷️ Category</label><select id="txnCategory" required></select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>🏦 Account</label><select id="txnAccount" required></select></div>
+          <div class="form-group"><label>📝 Notes</label><input type="text" id="txnNotes" placeholder="Optional notes..."></div>
+        </div>
+        <input type="hidden" id="editId" value="-1">
+        <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">💾 Save Transaction</button>
+          <button type="button" class="btn btn-secondary" onclick="resetForm()">Clear</button>
+        </div>
+      </form>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📜 Recent Transactions</span><div style="display: flex; gap: 0.5rem;"><input type="text" id="searchInput" placeholder="🔍 Search..." style="width: 200px;" onkeyup="renderTransactionList()"><select id="filterType" onchange="renderTransactionList()"><option value="all">All types</option><option value="expense">Expense</option><option value="income">Income</option><option value="transfer">Transfer</option></select></div></div>
+      <div class="transaction-list" id="transactionList"></div>
+      <div style="margin-top: 1rem; display: flex; justify-content: space-between;"><span id="txnCount"></span><button class="btn btn-danger" onclick="deleteAllTransactions()" style="font-size: 0.7rem;">🗑️ Delete All</button></div>
+    </div>
+  </div>
+
+  <!-- Analysis Panel -->
+  <div id="analysis-panel" class="panel">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="card"><div class="card-title">📈 Income vs Expenses Trend</div><div class="chart-container"><canvas id="trendChart"></canvas></div></div>
+    <div class="card"><div class="card-title">🥧 Spending by Category</div><div class="chart-container"><canvas id="categoryChart"></canvas></div></div>
+    <div class="card"><div class="card-title">✨ Smart Insights</div><div id="insightsContent"></div></div>
+  </div>
+
+  <!-- Categories Panel -->
+  <div id="categories-panel" class="panel">
+    <div class="card"><div class="card-title"><span>📁 Expense Categories</span><button class="btn btn-primary" onclick="showAddCategoryModal('expense')">+ Add Expense Category</button></div><div class="items-grid" id="expenseCategoriesList"></div></div>
+    <div class="card"><div class="card-title"><span>💰 Income Categories</span><button class="btn btn-primary" onclick="showAddCategoryModal('income')">+ Add Income Category</button></div><div class="items-grid" id="incomeCategoriesList"></div></div>
+  </div>
+
+  <!-- Accounts Panel -->
+  <div id="accounts-panel" class="panel">
+    <div class="card"><div class="card-title"><span>🏦 Your Accounts</span><button class="btn btn-primary" onclick="showAddAccountModal()">+ Add Account</button></div><div class="items-grid" id="accountsList"></div></div>
+    <div class="card"><div class="card-title">💰 Account Summary</div><div class="stats-grid" id="accountStatsGrid"></div></div>
+  </div>
+
+  <!-- Footer with Creator Info -->
+  <div class="footer">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div class="creator-badge">
+        👨‍💻 Created by <strong>Nisitha Wijerathna</strong>
+      </div>
+      <div class="creator-badge">
+        📧 <a href="mailto:nisithawijerathna@hotmail.com">nisithawijerathna@hotmail.com</a>
+      </div>
+      <div class="creator-badge">
+        © 2024 Finwise Pro · All data stored locally
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div id="categoryModal" class="modal"><div class="modal-content"><div class="modal-header"><h3 id="categoryModalTitle">Add Category</h3><button class="btn btn-secondary" onclick="closeModal('categoryModal')">✕</button></div><input type="hidden" id="categoryModalType"><input type="hidden" id="categoryEditId"><div class="form-group"><label>Category Name</label><input type="text" id="categoryName" placeholder="Category name"></div><button class="btn btn-primary" style="width:100%;margin-top:1rem;" onclick="saveCategory()">Save</button></div></div>
+<div id="accountModal" class="modal"><div class="modal-content"><div class="modal-header"><h3 id="accountModalTitle">Add Account</h3><button class="btn btn-secondary" onclick="closeModal('accountModal')">✕</button></div><input type="hidden" id="accountEditId"><div class="form-group"><label>Account Name</label><input type="text" id="accountName" placeholder="Account name"></div><div class="form-group"><label>Initial Balance (Rs.)</label><input type="number" id="accountBalance" step="0.01" placeholder="0.00"></div><button class="btn btn-primary" style="width:100%;margin-top:1rem;" onclick="saveAccount()">Save</button></div></div>
+<div id="importModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>📂 Restore from Backup</h3><button class="btn btn-secondary" onclick="closeModal('importModal')">✕</button></div><p style="margin-bottom:1rem;">Upload a JSON backup file</p><input type="file" id="restoreFile" accept=".json" onchange="restoreFromBackup(this.files[0])"><button class="btn btn-secondary" style="margin-top:1rem;width:100%;" onclick="downloadTemplate()">📄 Download CSV Template</button></div></div>
+
+<script>
+  // Database Setup
+  let db = null;
+  let transactions = [];
+  let categories = { expense: [], income: [] };
+  let accounts = [];
+  let accountInitialBalances = {}; // Store initial balances separately
+  let charts = {};
+
+  // Open IndexedDB
+  function openDatabase() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('FinwiseDB', 3);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => { db = request.result; resolve(db); };
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('transactions')) {
+          const store = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+          store.createIndex('date', 'date');
+          store.createIndex('type', 'type');
+        }
+        if (!db.objectStoreNames.contains('categories')) {
+          const store = db.createObjectStore('categories', { keyPath: 'id', autoIncrement: true });
+          store.createIndex('type', 'type');
+        }
+        if (!db.objectStoreNames.contains('accounts')) {
+          db.createObjectStore('accounts', { keyPath: 'id', autoIncrement: true });
+        }
+        if (!db.objectStoreNames.contains('account_balances')) {
+          db.createObjectStore('account_balances', { keyPath: 'accountName' });
+        }
+      };
+    });
+  }
+
+  // Load all data
+  async function loadAllData() {
+    showLoading(true);
+    transactions = await getAll('transactions');
+    const allCategories = await getAll('categories');
+    categories = { expense: [], income: [] };
+    allCategories.forEach(cat => categories[cat.type].push(cat.name));
+    accounts = await getAll('accounts');
+    await loadInitialBalances();
+    updateAccountBalances();
+    showLoading(false);
+    renderAll();
+  }
+
+  async function loadInitialBalances() {
+    const balances = await getAll('account_balances');
+    accountInitialBalances = {};
+    balances.forEach(b => { accountInitialBalances[b.accountName] = b.balance; });
+  }
+
+  async function saveInitialBalance(accountName, balance) {
+    const store = db.transaction('account_balances', 'readwrite').objectStore('account_balances');
+    await store.put({ accountName, balance });
+    accountInitialBalances[accountName] = balance;
+  }
+
+  function getAll(storeName) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  function addItem(storeName, item) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const request = store.add(item);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  function updateItem(storeName, id, item) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const request = store.put({ ...item, id });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  function deleteItem(storeName, id) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  function clearStore(storeName) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const request = store.clear();
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  function updateAccountBalances() {
+    // Start with initial balances
+    accounts.forEach(acc => {
+      acc.balance = accountInitialBalances[acc.name] || 0;
+    });
+    
+    // Add/subtract transaction amounts (but NOT initial balance transactions)
+    transactions.forEach(t => {
+      const account = accounts.find(a => a.name === t.account);
+      if (account) {
+        if (t.type === 'income') account.balance += t.amount;
+        else if (t.type === 'expense') account.balance -= t.amount;
+      }
+    });
+  }
+
+  // Transaction CRUD
+  async function saveTransaction(e) {
+    e.preventDefault();
+    const transaction = {
+      date: new Date(document.getElementById('txnDate').value).toISOString(),
+      type: document.getElementById('txnType').value,
+      amount: parseFloat(document.getElementById('txnAmount').value),
+      category: document.getElementById('txnCategory').value,
+      account: document.getElementById('txnAccount').value,
+      notes: document.getElementById('txnNotes').value || ''
+    };
+    if (isNaN(transaction.amount) || transaction.amount <= 0) { showToast('Enter valid amount', 'error'); return; }
+    
+    const editId = parseInt(document.getElementById('editId').value);
+    if (editId > 0) {
+      await updateItem('transactions', editId, transaction);
+      showToast('Transaction updated!', 'success');
+    } else {
+      await addItem('transactions', transaction);
+      showToast('Transaction added!', 'success');
+    }
+    resetForm();
+    await loadAllData();
+  }
+
+  async function deleteTransactionById(id) {
+    if (confirm('Delete this transaction?')) {
+      await deleteItem('transactions', id);
+      await loadAllData();
+      showToast('Deleted!', 'success');
+    }
+  }
+
+  async function deleteAllTransactions() {
+    if (confirm('Delete ALL transactions?')) {
+      await clearStore('transactions');
+      await loadAllData();
+      showToast('All transactions deleted', 'success');
+    }
+  }
+
+  function editTransactionById(id) {
+    const t = transactions.find(tx => tx.id === id);
+    if (t) {
+      document.getElementById('txnDate').value = t.date.split('T')[0];
+      document.getElementById('txnType').value = t.type;
+      document.getElementById('txnAmount').value = t.amount;
+      updateCategoryDropdown();
+      document.getElementById('txnCategory').value = t.category;
+      document.getElementById('txnAccount').value = t.account;
+      document.getElementById('txnNotes').value = t.notes || '';
+      document.getElementById('editId').value = t.id;
+      document.getElementById('formTitle').innerHTML = '✏️ Edit Transaction';
+    }
+  }
+
+  // Category CRUD
+  async function saveCategory() {
+    const type = document.getElementById('categoryModalType').value;
+    const name = document.getElementById('categoryName').value.trim();
+    const editId = document.getElementById('categoryEditId').value;
+    if (!name) { showToast('Enter name', 'error'); return; }
+    
+    const allCats = await getAll('categories');
+    if (editId) {
+      await updateItem('categories', parseInt(editId), { type, name });
+      showToast('Category updated!', 'success');
+    } else {
+      if (allCats.some(c => c.name === name && c.type === type)) { showToast('Category exists', 'error'); return; }
+      await addItem('categories', { type, name });
+      showToast('Category added!', 'success');
+    }
+    closeModal('categoryModal');
+    await loadAllData();
+  }
+
+  async function deleteCategoryByName(type, name) {
+    if (confirm(`Delete "${name}"?`)) {
+      const allCats = await getAll('categories');
+      const cat = allCats.find(c => c.name === name && c.type === type);
+      if (cat) await deleteItem('categories', cat.id);
+      // Update transactions with this category to 'Other'
+      for (const t of transactions) {
+        if (t.category === name) {
+          t.category = 'Other';
+          await updateItem('transactions', t.id, t);
+        }
+      }
+      await loadAllData();
+      showToast('Category deleted!', 'success');
+    }
+  }
+
+  function editCategory(type, name) {
+    document.getElementById('categoryModalTitle').innerText = type === 'expense' ? 'Edit Expense Category' : 'Edit Income Category';
+    document.getElementById('categoryModalType').value = type;
+    document.getElementById('categoryEditId').value = '';
+    document.getElementById('categoryName').value = name;
+    document.getElementById('categoryModal').classList.add('active');
+  }
+
+  // Account CRUD - NO initial balance as transaction
+  async function saveAccount() {
+    const name = document.getElementById('accountName').value.trim();
+    const initialBalance = parseFloat(document.getElementById('accountBalance').value) || 0;
+    const editId = document.getElementById('accountEditId').value;
+    
+    if (!name) { showToast('Enter name', 'error'); return; }
+    
+    if (editId) {
+      // Just update name, keep initial balance
+      await updateItem('accounts', parseInt(editId), { name });
+      showToast('Account updated!', 'success');
+    } else {
+      const allAccs = await getAll('accounts');
+      if (allAccs.some(a => a.name === name)) { showToast('Account exists', 'error'); return; }
+      await addItem('accounts', { name });
+      // Save initial balance separately - NOT as a transaction
+      if (initialBalance !== 0) {
+        await saveInitialBalance(name, initialBalance);
+      }
+      showToast('Account added!', 'success');
+    }
+    closeModal('accountModal');
+    await loadAllData();
+  }
+
+  async function deleteAccountById(id) {
+    if (confirm('Delete account? Transactions will move to Cash')) {
+      const acc = accounts.find(a => a.id === id);
+      if (acc) {
+        await deleteItem('accounts', id);
+        // Remove initial balance
+        const balanceStore = db.transaction('account_balances', 'readwrite').objectStore('account_balances');
+        await balanceStore.delete(acc.name);
+        // Update transactions
+        for (const t of transactions) {
+          if (t.account === acc.name) {
+            t.account = 'Cash';
+            await updateItem('transactions', t.id, t);
+          }
+        }
+        await loadAllData();
+        showToast('Account deleted!', 'success');
+      }
+    }
+  }
+
+  function editAccountById(id) {
+    const acc = accounts.find(a => a.id === id);
+    if (acc) {
+      document.getElementById('accountModalTitle').innerText = 'Edit Account';
+      document.getElementById('accountEditId').value = acc.id;
+      document.getElementById('accountName').value = acc.name;
+      document.getElementById('accountBalance').value = '';
+      document.getElementById('accountModal').classList.add('active');
+    }
+  }
+
+  // Render functions
+  function renderAll() {
+    renderCategoriesList();
+    renderAccountsList();
+    updateCategoryDropdown();
+    updateAccountDropdown();
+    renderStats();
+    renderTransactionList();
+    renderAccountStats();
+    renderInsights();
+    updateCharts();
+  }
+
+  function renderCategoriesList() {
+    const expenseContainer = document.getElementById('expenseCategoriesList');
+    if (expenseContainer) {
+      expenseContainer.innerHTML = categories.expense.map(cat => `
+        <div class="item-card"><div class="item-info"><div class="item-name">📁 ${cat}</div><div class="item-detail">Expense Category</div></div>
+        <div class="item-actions"><button class="icon-btn" onclick="editCategory('expense', '${cat}')">✏️</button>
+        <button class="icon-btn" onclick="deleteCategoryByName('expense', '${cat}')">🗑️</button></div></div>`).join('');
+    }
+    const incomeContainer = document.getElementById('incomeCategoriesList');
+    if (incomeContainer) {
+      incomeContainer.innerHTML = categories.income.map(cat => `
+        <div class="item-card"><div class="item-info"><div class="item-name">💰 ${cat}</div><div class="item-detail">Income Category</div></div>
+        <div class="item-actions"><button class="icon-btn" onclick="editCategory('income', '${cat}')">✏️</button>
+        <button class="icon-btn" onclick="deleteCategoryByName('income', '${cat}')">🗑️</button></div></div>`).join('');
+    }
+  }
+
+  function renderAccountsList() {
+    const container = document.getElementById('accountsList');
+    if (container) {
+      container.innerHTML = accounts.map(acc => `
+        <div class="item-card"><div class="item-info"><div class="item-name">🏦 ${acc.name}</div>
+        <div class="item-detail">Balance: <span class="balance-positive">₹${(acc.balance || 0).toLocaleString()}</span></div>
+        <div class="item-detail">Initial: ₹${(accountInitialBalances[acc.name] || 0).toLocaleString()}</div></div>
+        <div class="item-actions"><button class="icon-btn" onclick="editAccountById(${acc.id})">✏️</button>
+        <button class="icon-btn" onclick="deleteAccountById(${acc.id})">🗑️</button></div></div>`).join('');
+    }
+  }
+
+  function renderAccountStats() {
+    const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+    const totalInitialBalance = Object.values(accountInitialBalances).reduce((sum, bal) => sum + bal, 0);
+    const totalFromTransactions = totalBalance - totalInitialBalance;
+    
+    document.getElementById('accountStatsGrid').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Total Net Worth</div><div class="stat-value balance-positive">₹${totalBalance.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Initial Balance Total</div><div class="stat-value">₹${totalInitialBalance.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">From Transactions</div><div class="stat-value">${totalFromTransactions >= 0 ? '+' : ''}₹${totalFromTransactions.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Accounts</div><div class="stat-value">${accounts.length}</div></div>`;
+  }
+
+  function renderStats() {
+    // Calculate income and expenses from transactions ONLY (excluding initial balances)
+    const expenses = transactions.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+    const income = transactions.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0);
+    const savings = income - expenses;
+    const savingsRate = income > 0 ? (savings / income * 100).toFixed(1) : 0;
+    
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Total Income</div><div class="stat-value" style="color: var(--success);">₹${income.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Expenses</div><div class="stat-value" style="color: var(--danger);">₹${expenses.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Net Savings</div><div class="stat-value" style="color: ${savings>=0?'var(--success)':'var(--danger)'};">₹${Math.abs(savings).toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Savings Rate</div><div class="stat-value">${savingsRate}%</div></div>
+      <div class="stat-card"><div class="stat-label">Transactions</div><div class="stat-value">${transactions.length}</div></div>`;
+  }
+
+  function renderTransactionList() {
+    const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const typeFilter = document.getElementById('filterType')?.value || 'all';
+    let filtered = [...transactions].sort((a,b) => new Date(b.date) - new Date(a.date));
+    if (typeFilter !== 'all') filtered = filtered.filter(t => t.type === typeFilter);
+    if (search) filtered = filtered.filter(t => t.category.toLowerCase().includes(search) || (t.notes || '').toLowerCase().includes(search) || t.account.toLowerCase().includes(search));
+    
+    const container = document.getElementById('transactionList');
+    if (filtered.length === 0) { container.innerHTML = '<div class="empty-state">📭 No transactions yet. Add one using the form!</div>'; document.getElementById('txnCount').innerText = '0 transactions'; return; }
+    container.innerHTML = filtered.map(t => {
+      const sign = t.type === 'expense' ? '-' : (t.type === 'income' ? '+' : '⟳');
+      const amountClass = t.type === 'expense' ? 'amount-expense' : (t.type === 'income' ? 'amount-income' : '');
+      return `<div class="transaction-item" onclick="editTransactionById(${t.id})"><div class="transaction-info"><div class="transaction-category">${t.category}</div><div class="transaction-date">${new Date(t.date).toLocaleDateString()} · ${t.account}</div>${t.notes ? `<div style="font-size:0.7rem;">📝 ${t.notes.substring(0,40)}</div>` : ''}</div><div style="display:flex;gap:0.75rem;"><div class="transaction-amount ${amountClass}">${sign} ₹${t.amount.toLocaleString()}</div><button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.7rem;" onclick="event.stopPropagation(); deleteTransactionById(${t.id})">🗑️</button></div></div>`;
+    }).join('');
+    document.getElementById('txnCount').innerText = `${filtered.length} of ${transactions.length} transactions`;
+  }
+
+  function renderInsights() {
+    const expenses = transactions.filter(t => t.type === 'expense');
+    const income = transactions.filter(t => t.type === 'income');
+    const totalExp = expenses.reduce((s,t) => s + t.amount, 0);
+    const totalInc = income.reduce((s,t) => s + t.amount, 0);
+    const catMap = {};
+    expenses.forEach(t => catMap[t.category] = (catMap[t.category] || 0) + t.amount);
+    const topCat = Object.entries(catMap).sort((a,b) => b[1] - a[1])[0];
+    const insights = [];
+    if (topCat) insights.push(`🔹 Top spending: <strong>${topCat[0]}</strong> (₹${topCat[1].toLocaleString()})`);
+    const monthlyMap = {};
+    expenses.forEach(t => { const key = new Date(t.date).toLocaleString('default', { month: 'short', year: 'numeric' }); monthlyMap[key] = (monthlyMap[key] || 0) + t.amount; });
+    const highMonth = Object.entries(monthlyMap).sort((a,b) => b[1] - a[1])[0];
+    if (highMonth) insights.push(`📆 Highest month: <strong>${highMonth[0]}</strong> (₹${highMonth[1].toLocaleString()})`);
+    const savings = totalInc - totalExp;
+    if (savings > 0) insights.push(`💰 Saving <strong>${((savings/totalInc)*100).toFixed(1)}%</strong> of income!`);
+    else if (savings < 0) insights.push(`⚠️ Expenses exceed income by ₹${Math.abs(savings).toLocaleString()}`);
+    document.getElementById('insightsContent').innerHTML = `<div class="stats-grid" style="grid-template-columns:1fr;">${insights.map(i => `<div class="stat-card" style="text-align:left;">${i}</div>`).join('')}</div>`;
+  }
+
+  function updateCharts() {
+    const monthlyData = {};
+    transactions.forEach(t => {
+      const key = new Date(t.date).toLocaleString('default', { month: 'short', year: 'numeric' });
+      if (!monthlyData[key]) monthlyData[key] = { income: 0, expense: 0 };
+      if (t.type === 'income') monthlyData[key].income += t.amount;
+      if (t.type === 'expense') monthlyData[key].expense += t.amount;
+    });
+    const months = Object.keys(monthlyData).sort((a,b) => new Date(a) - new Date(b));
+    if (charts.trend) charts.trend.destroy();
+    const trendCtx = document.getElementById('trendChart');
+    if (trendCtx && months.length) {
+      charts.trend = new Chart(trendCtx, { type: 'bar', data: { labels: months, datasets: [{ label: 'Income', data: months.map(m => monthlyData[m].income), backgroundColor: '#1C8B5E', borderRadius: 8 }, { label: 'Expenses', data: months.map(m => monthlyData[m].expense), backgroundColor: '#D45A4A', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } });
+    }
+    const expenses = transactions.filter(t => t.type === 'expense');
+    const catMap = {};
+    expenses.forEach(t => catMap[t.category] = (catMap[t.category] || 0) + t.amount);
+    const sorted = Object.entries(catMap).sort((a,b) => b[1] - a[1]).slice(0, 6);
+    if (charts.category) charts.category.destroy();
+    const catCtx = document.getElementById('categoryChart');
+    if (catCtx && sorted.length) {
+      charts.category = new Chart(catCtx, { type: 'doughnut', data: { labels: sorted.map(s => s[0]), datasets: [{ data: sorted.map(s => s[1]), backgroundColor: ['#1D9E75','#D85A30','#378ADD','#E6A017','#7F77DD','#D4537E'] }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } } });
+    }
+  }
+
+  // Helper functions
+  function updateCategoryDropdown() {
+    const type = document.getElementById('txnType').value;
+    const catSelect = document.getElementById('txnCategory');
+    const cats = type === 'expense' ? categories.expense : (type === 'income' ? categories.income : ['Transfer']);
+    catSelect.innerHTML = cats.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+  }
+
+  function updateAccountDropdown() {
+    const accSelect = document.getElementById('txnAccount');
+    accSelect.innerHTML = accounts.map(acc => `<option value="${acc.name}">${acc.name}</option>`).join('');
+  }
+
+  function resetForm() {
+    document.getElementById('txnDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('txnType').value = 'expense';
+    document.getElementById('txnAmount').value = '';
+    updateCategoryDropdown();
+    document.getElementById('txnCategory').value = categories.expense[0] || 'Other';
+    document.getElementById('txnAccount').value = accounts[0]?.name || 'Cash';
+    document.getElementById('txnNotes').value = '';
+    document.getElementById('editId').value = '-1';
+    document.getElementById('formTitle').innerHTML = '➕ Add New Transaction';
+  }
+
+  function switchPanel(panelId, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(panelId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function showAddCategoryModal(type) {
+    document.getElementById('categoryModalTitle').innerText = type === 'expense' ? 'Add Expense Category' : 'Add Income Category';
+    document.getElementById('categoryModalType').value = type;
+    document.getElementById('categoryEditId').value = '';
+    document.getElementById('categoryName').value = '';
+    document.getElementById('categoryModal').classList.add('active');
+  }
+
+  function showAddAccountModal() {
+    document.getElementById('accountModalTitle').innerText = 'Add Account';
+    document.getElementById('accountEditId').value = '';
+    document.getElementById('accountName').value = '';
+    document.getElementById('accountBalance').value = '';
+    document.getElementById('accountModal').classList.add('active');
+  }
+
+  function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
+  function showLoading(show) { document.getElementById('loadingIndicator').style.display = show ? 'flex' : 'none'; }
+  function showToast(msg, type) { const toast = document.createElement('div'); toast.className = 'toast'; toast.style.background = type === 'error' ? 'var(--danger)' : 'var(--success)'; toast.innerText = msg; document.body.appendChild(toast); setTimeout(() => toast.remove(), 3000); }
+
+  // Backup & Restore
+  async function backupDatabase() {
+    const balances = await getAll('account_balances');
+    const data = { 
+      transactions: await getAll('transactions'), 
+      categories: await getAll('categories'), 
+      accounts: await getAll('accounts'),
+      accountBalances: balances,
+      version: 3, 
+      timestamp: new Date().toISOString() 
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `finwise_backup_${new Date().toISOString().slice(0,19)}.json`;
+    link.click();
+    showToast('Backup created!', 'success');
+  }
+
+  async function restoreFromBackup(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        await clearStore('transactions');
+        await clearStore('categories');
+        await clearStore('accounts');
+        await clearStore('account_balances');
+        for (const t of data.transactions) await addItem('transactions', t);
+        for (const c of data.categories) await addItem('categories', c);
+        for (const a of data.accounts) await addItem('accounts', a);
+        if (data.accountBalances) {
+          for (const b of data.accountBalances) {
+            const balanceStore = db.transaction('account_balances', 'readwrite').objectStore('account_balances');
+            await balanceStore.put(b);
+          }
+        }
+        await loadAllData();
+        showToast('Database restored!', 'success');
+        closeModal('importModal');
+      } catch (err) { showToast('Invalid backup file', 'error'); }
+    };
+    reader.readAsText(file);
+  }
+
+  function exportToCSV() {
+    if (!transactions.length) { showToast('No data', 'error'); return; }
+    const headers = ['Date', 'Type', 'Amount', 'Category', 'Account', 'Notes'];
+    const rows = transactions.map(t => [new Date(t.date).toISOString().split('T')[0], t.type, t.amount, t.category, t.account, t.notes || '']);
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `finwise_export_${new Date().toISOString().slice(0,19)}.csv`;
+    link.click();
+    showToast('CSV exported!', 'success');
+  }
+
+  function exportToPDF() { const element = document.querySelector('.panel.active'); html2pdf().set({ margin: 0.5, filename: `finwise_report_${new Date().toISOString().slice(0,19)}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 } }).from(element).save(); }
+  function showImportModal() { document.getElementById('importModal').classList.add('active'); }
+  function downloadTemplate() { const template = `Date,Type,Amount,Category,Account,Notes\n${new Date().toISOString().split('T')[0]},expense,100.00,Food & Dining,Cash,Sample expense`; const blob = new Blob([template], { type: 'text/csv' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'finwise_template.csv'; link.click(); }
+  function toggleDarkMode() { document.body.classList.toggle('dark'); const btn = document.getElementById('darkModeToggle'); btn.innerHTML = document.body.classList.contains('dark') ? '☀️ Light mode' : '🌙 Dark mode'; }
+
+  // Initialize
+  (async () => {
+    await openDatabase();
+    await loadAllData();
+    resetForm();
+  })();
+</script>
+</body>
+</html>
