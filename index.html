@@ -142,7 +142,7 @@
           <div class="form-group"><label>💰 Type</label><select id="txnType" required onchange="updateCategoryDropdown()"><option value="expense">Expense (-)</option><option value="income">Income (+)</option><option value="transfer">Transfer</option></select></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>💵 Amount (Rs.)</label><input type="number" id="txnAmount" step="0.01" required placeholder="0.00"></div>
+          <div class="form-group"><label>💵 Amount (Rs)</label><input type="number" id="txnAmount" step="0.01" required placeholder="0.00"></div>
           <div class="form-group"><label>🏷️ Category</label><select id="txnCategory" required></select></div>
         </div>
         <div class="form-row">
@@ -193,7 +193,7 @@
         📧 <a href="mailto:nisithawijerathna@hotmail.com">nisithawijerathna@hotmail.com</a>
       </div>
       <div class="creator-badge">
-        © 2024 Finwise Pro · All data stored locally
+        © 2026 Finwise Pro · All data stored locally
       </div>
     </div>
   </div>
@@ -201,7 +201,7 @@
 
 <!-- Modals -->
 <div id="categoryModal" class="modal"><div class="modal-content"><div class="modal-header"><h3 id="categoryModalTitle">Add Category</h3><button class="btn btn-secondary" onclick="closeModal('categoryModal')">✕</button></div><input type="hidden" id="categoryModalType"><input type="hidden" id="categoryEditId"><div class="form-group"><label>Category Name</label><input type="text" id="categoryName" placeholder="Category name"></div><button class="btn btn-primary" style="width:100%;margin-top:1rem;" onclick="saveCategory()">Save</button></div></div>
-<div id="accountModal" class="modal"><div class="modal-content"><div class="modal-header"><h3 id="accountModalTitle">Add Account</h3><button class="btn btn-secondary" onclick="closeModal('accountModal')">✕</button></div><input type="hidden" id="accountEditId"><div class="form-group"><label>Account Name</label><input type="text" id="accountName" placeholder="Account name"></div><div class="form-group"><label>Initial Balance (Rs.)</label><input type="number" id="accountBalance" step="0.01" placeholder="0.00"></div><button class="btn btn-primary" style="width:100%;margin-top:1rem;" onclick="saveAccount()">Save</button></div></div>
+<div id="accountModal" class="modal"><div class="modal-content"><div class="modal-header"><h3 id="accountModalTitle">Add Account</h3><button class="btn btn-secondary" onclick="closeModal('accountModal')">✕</button></div><input type="hidden" id="accountEditId"><div class="form-group"><label>Account Name</label><input type="text" id="accountName" placeholder="Account name"></div><div class="form-group"><label>Initial Balance (Rs)</label><input type="number" id="accountBalance" step="0.01" placeholder="0.00"></div><button class="btn btn-primary" style="width:100%;margin-top:1rem;" onclick="saveAccount()">Save</button></div></div>
 <div id="importModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>📂 Restore from Backup</h3><button class="btn btn-secondary" onclick="closeModal('importModal')">✕</button></div><p style="margin-bottom:1rem;">Upload a JSON backup file</p><input type="file" id="restoreFile" accept=".json" onchange="restoreFromBackup(this.files[0])"><button class="btn btn-secondary" style="margin-top:1rem;width:100%;" onclick="downloadTemplate()">📄 Download CSV Template</button></div></div>
 
 <script>
@@ -210,8 +210,19 @@
   let transactions = [];
   let categories = { expense: [], income: [] };
   let accounts = [];
-  let accountInitialBalances = {}; // Store initial balances separately
+  let accountInitialBalances = {};
   let charts = {};
+
+  // Helper function to format currency
+  function formatCurrency(amount) {
+    return 'Rs ' + Math.round(amount).toLocaleString();
+  }
+  
+  function formatCompactCurrency(amount) {
+    if (amount >= 1000000) return 'Rs ' + (amount/1000000).toFixed(1) + 'M';
+    if (amount >= 1000) return 'Rs ' + Math.round(amount/1000) + 'k';
+    return 'Rs ' + Math.round(amount);
+  }
 
   // Open IndexedDB
   function openDatabase() {
@@ -317,12 +328,10 @@
   }
 
   function updateAccountBalances() {
-    // Start with initial balances
     accounts.forEach(acc => {
       acc.balance = accountInitialBalances[acc.name] || 0;
     });
     
-    // Add/subtract transaction amounts (but NOT initial balance transactions)
     transactions.forEach(t => {
       const account = accounts.find(a => a.name === t.account);
       if (account) {
@@ -413,7 +422,6 @@
       const allCats = await getAll('categories');
       const cat = allCats.find(c => c.name === name && c.type === type);
       if (cat) await deleteItem('categories', cat.id);
-      // Update transactions with this category to 'Other'
       for (const t of transactions) {
         if (t.category === name) {
           t.category = 'Other';
@@ -433,7 +441,7 @@
     document.getElementById('categoryModal').classList.add('active');
   }
 
-  // Account CRUD - NO initial balance as transaction
+  // Account CRUD
   async function saveAccount() {
     const name = document.getElementById('accountName').value.trim();
     const initialBalance = parseFloat(document.getElementById('accountBalance').value) || 0;
@@ -442,14 +450,12 @@
     if (!name) { showToast('Enter name', 'error'); return; }
     
     if (editId) {
-      // Just update name, keep initial balance
       await updateItem('accounts', parseInt(editId), { name });
       showToast('Account updated!', 'success');
     } else {
       const allAccs = await getAll('accounts');
       if (allAccs.some(a => a.name === name)) { showToast('Account exists', 'error'); return; }
       await addItem('accounts', { name });
-      // Save initial balance separately - NOT as a transaction
       if (initialBalance !== 0) {
         await saveInitialBalance(name, initialBalance);
       }
@@ -464,10 +470,8 @@
       const acc = accounts.find(a => a.id === id);
       if (acc) {
         await deleteItem('accounts', id);
-        // Remove initial balance
         const balanceStore = db.transaction('account_balances', 'readwrite').objectStore('account_balances');
         await balanceStore.delete(acc.name);
-        // Update transactions
         for (const t of transactions) {
           if (t.account === acc.name) {
             t.account = 'Cash';
@@ -526,8 +530,8 @@
     if (container) {
       container.innerHTML = accounts.map(acc => `
         <div class="item-card"><div class="item-info"><div class="item-name">🏦 ${acc.name}</div>
-        <div class="item-detail">Balance: <span class="balance-positive">₹${(acc.balance || 0).toLocaleString()}</span></div>
-        <div class="item-detail">Initial: ₹${(accountInitialBalances[acc.name] || 0).toLocaleString()}</div></div>
+        <div class="item-detail">Balance: <span class="balance-positive">${formatCurrency(acc.balance || 0)}</span></div>
+        <div class="item-detail">Initial: ${formatCurrency(accountInitialBalances[acc.name] || 0)}</div></div>
         <div class="item-actions"><button class="icon-btn" onclick="editAccountById(${acc.id})">✏️</button>
         <button class="icon-btn" onclick="deleteAccountById(${acc.id})">🗑️</button></div></div>`).join('');
     }
@@ -539,23 +543,22 @@
     const totalFromTransactions = totalBalance - totalInitialBalance;
     
     document.getElementById('accountStatsGrid').innerHTML = `
-      <div class="stat-card"><div class="stat-label">Total Net Worth</div><div class="stat-value balance-positive">₹${totalBalance.toLocaleString()}</div></div>
-      <div class="stat-card"><div class="stat-label">Initial Balance Total</div><div class="stat-value">₹${totalInitialBalance.toLocaleString()}</div></div>
-      <div class="stat-card"><div class="stat-label">From Transactions</div><div class="stat-value">${totalFromTransactions >= 0 ? '+' : ''}₹${totalFromTransactions.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Net Worth</div><div class="stat-value balance-positive">${formatCurrency(totalBalance)}</div></div>
+      <div class="stat-card"><div class="stat-label">Initial Balance Total</div><div class="stat-value">${formatCurrency(totalInitialBalance)}</div></div>
+      <div class="stat-card"><div class="stat-label">From Transactions</div><div class="stat-value">${totalFromTransactions >= 0 ? '+' : ''}${formatCurrency(Math.abs(totalFromTransactions))}</div></div>
       <div class="stat-card"><div class="stat-label">Total Accounts</div><div class="stat-value">${accounts.length}</div></div>`;
   }
 
   function renderStats() {
-    // Calculate income and expenses from transactions ONLY (excluding initial balances)
     const expenses = transactions.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
     const income = transactions.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0);
     const savings = income - expenses;
     const savingsRate = income > 0 ? (savings / income * 100).toFixed(1) : 0;
     
     document.getElementById('statsGrid').innerHTML = `
-      <div class="stat-card"><div class="stat-label">Total Income</div><div class="stat-value" style="color: var(--success);">₹${income.toLocaleString()}</div></div>
-      <div class="stat-card"><div class="stat-label">Total Expenses</div><div class="stat-value" style="color: var(--danger);">₹${expenses.toLocaleString()}</div></div>
-      <div class="stat-card"><div class="stat-label">Net Savings</div><div class="stat-value" style="color: ${savings>=0?'var(--success)':'var(--danger)'};">₹${Math.abs(savings).toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Income</div><div class="stat-value" style="color: var(--success);">${formatCurrency(income)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Expenses</div><div class="stat-value" style="color: var(--danger);">${formatCurrency(expenses)}</div></div>
+      <div class="stat-card"><div class="stat-label">Net Savings</div><div class="stat-value" style="color: ${savings>=0?'var(--success)':'var(--danger)'};">${formatCurrency(Math.abs(savings))}</div></div>
       <div class="stat-card"><div class="stat-label">Savings Rate</div><div class="stat-value">${savingsRate}%</div></div>
       <div class="stat-card"><div class="stat-label">Transactions</div><div class="stat-value">${transactions.length}</div></div>`;
   }
@@ -572,7 +575,7 @@
     container.innerHTML = filtered.map(t => {
       const sign = t.type === 'expense' ? '-' : (t.type === 'income' ? '+' : '⟳');
       const amountClass = t.type === 'expense' ? 'amount-expense' : (t.type === 'income' ? 'amount-income' : '');
-      return `<div class="transaction-item" onclick="editTransactionById(${t.id})"><div class="transaction-info"><div class="transaction-category">${t.category}</div><div class="transaction-date">${new Date(t.date).toLocaleDateString()} · ${t.account}</div>${t.notes ? `<div style="font-size:0.7rem;">📝 ${t.notes.substring(0,40)}</div>` : ''}</div><div style="display:flex;gap:0.75rem;"><div class="transaction-amount ${amountClass}">${sign} ₹${t.amount.toLocaleString()}</div><button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.7rem;" onclick="event.stopPropagation(); deleteTransactionById(${t.id})">🗑️</button></div></div>`;
+      return `<div class="transaction-item" onclick="editTransactionById(${t.id})"><div class="transaction-info"><div class="transaction-category">${t.category}</div><div class="transaction-date">${new Date(t.date).toLocaleDateString()} · ${t.account}</div>${t.notes ? `<div style="font-size:0.7rem;">📝 ${t.notes.substring(0,40)}</div>` : ''}</div><div style="display:flex;gap:0.75rem;"><div class="transaction-amount ${amountClass}">${sign} ${formatCurrency(t.amount)}</div><button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.7rem;" onclick="event.stopPropagation(); deleteTransactionById(${t.id})">🗑️</button></div></div>`;
     }).join('');
     document.getElementById('txnCount').innerText = `${filtered.length} of ${transactions.length} transactions`;
   }
@@ -586,14 +589,14 @@
     expenses.forEach(t => catMap[t.category] = (catMap[t.category] || 0) + t.amount);
     const topCat = Object.entries(catMap).sort((a,b) => b[1] - a[1])[0];
     const insights = [];
-    if (topCat) insights.push(`🔹 Top spending: <strong>${topCat[0]}</strong> (₹${topCat[1].toLocaleString()})`);
+    if (topCat) insights.push(`🔹 Top spending: <strong>${topCat[0]}</strong> (${formatCurrency(topCat[1])})`);
     const monthlyMap = {};
     expenses.forEach(t => { const key = new Date(t.date).toLocaleString('default', { month: 'short', year: 'numeric' }); monthlyMap[key] = (monthlyMap[key] || 0) + t.amount; });
     const highMonth = Object.entries(monthlyMap).sort((a,b) => b[1] - a[1])[0];
-    if (highMonth) insights.push(`📆 Highest month: <strong>${highMonth[0]}</strong> (₹${highMonth[1].toLocaleString()})`);
+    if (highMonth) insights.push(`📆 Highest month: <strong>${highMonth[0]}</strong> (${formatCurrency(highMonth[1])})`);
     const savings = totalInc - totalExp;
     if (savings > 0) insights.push(`💰 Saving <strong>${((savings/totalInc)*100).toFixed(1)}%</strong> of income!`);
-    else if (savings < 0) insights.push(`⚠️ Expenses exceed income by ₹${Math.abs(savings).toLocaleString()}`);
+    else if (savings < 0) insights.push(`⚠️ Expenses exceed income by ${formatCurrency(Math.abs(savings))}`);
     document.getElementById('insightsContent').innerHTML = `<div class="stats-grid" style="grid-template-columns:1fr;">${insights.map(i => `<div class="stat-card" style="text-align:left;">${i}</div>`).join('')}</div>`;
   }
 
@@ -609,7 +612,7 @@
     if (charts.trend) charts.trend.destroy();
     const trendCtx = document.getElementById('trendChart');
     if (trendCtx && months.length) {
-      charts.trend = new Chart(trendCtx, { type: 'bar', data: { labels: months, datasets: [{ label: 'Income', data: months.map(m => monthlyData[m].income), backgroundColor: '#1C8B5E', borderRadius: 8 }, { label: 'Expenses', data: months.map(m => monthlyData[m].expense), backgroundColor: '#D45A4A', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } });
+      charts.trend = new Chart(trendCtx, { type: 'bar', data: { labels: months, datasets: [{ label: 'Income', data: months.map(m => monthlyData[m].income), backgroundColor: '#1C8B5E', borderRadius: 8 }, { label: 'Expenses', data: months.map(m => monthlyData[m].expense), backgroundColor: '#D45A4A', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': Rs ' + context.raw.toLocaleString(); } } } }, scales: { y: { ticks: { callback: function(value) { return 'Rs ' + value.toLocaleString(); } } } } } });
     }
     const expenses = transactions.filter(t => t.type === 'expense');
     const catMap = {};
@@ -618,7 +621,7 @@
     if (charts.category) charts.category.destroy();
     const catCtx = document.getElementById('categoryChart');
     if (catCtx && sorted.length) {
-      charts.category = new Chart(catCtx, { type: 'doughnut', data: { labels: sorted.map(s => s[0]), datasets: [{ data: sorted.map(s => s[1]), backgroundColor: ['#1D9E75','#D85A30','#378ADD','#E6A017','#7F77DD','#D4537E'] }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } } });
+      charts.category = new Chart(catCtx, { type: 'doughnut', data: { labels: sorted.map(s => s[0]), datasets: [{ data: sorted.map(s => s[1]), backgroundColor: ['#1D9E75','#D85A30','#378ADD','#E6A017','#7F77DD','#D4537E'] }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } }, tooltip: { callbacks: { label: function(context) { return context.label + ': Rs ' + context.raw.toLocaleString(); } } } } } });
     }
   }
 
